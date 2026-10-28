@@ -11,6 +11,10 @@ function button(s, x, y, label, cb) {
 }
 export class StartScene extends Phaser.Scene {
   constructor() { super('Start'); }
+  preload() {
+    const a = SKIN.atlas; this.load.atlas(a.key, a.png, a.json);
+    for (const [k, v] of Object.entries(SKIN.bgImages)) this.load.image(k, v);
+  }
   create() {
     this.cameras.main.setBackgroundColor(SKIN.bg1);
     T(this, 360, 380, SKIN.title, 84, SKIN.accent);
@@ -28,6 +32,7 @@ export class PlayScene extends Phaser.Scene {
   }
   create() {
     const c = this.cfg; this.cameras.main.setBackgroundColor(SKIN[c.bg]);
+    if (this.textures.exists(c.bg)) this.add.image(360, 640, c.bg).setDisplaySize(GAME.width, GAME.height);
     this.hud = T(this, 360, 70, '', 36); this.hud.setDepth(10);
     const ox = 140, oy = 380, gap = 220;
     for (let i = 0; i < 9; i++) {
@@ -65,21 +70,24 @@ export class PlayScene extends Phaser.Scene {
     else { this.combo++; this.bestCombo = Math.max(this.bestCombo, this.combo);
       let add = e.kind === 'gold' ? SCORE.gold : SCORE.ghost; if (this.combo > SCORE.comboThreshold) add += SCORE.comboBonus;
       this.score += add; this.fx(e.x, e.y, e.kind === 'gold' ? 0xffd23f : 0xffffff, '+' + add + (this.combo > SCORE.comboThreshold ? ` 连击${this.combo}` : '')); }
-    this.removeEnt(best); this.updateHud();
+    this.removeEnt(best, true); this.updateHud();
   }
   fx(x, y, color, txt) {
     const c = this.add.circle(x, y, 40, color, 0.8); this.tweens.add({ targets: c, scale: 2.2, alpha: 0, duration: 250, onComplete: () => c.destroy() });
     const t = T(this, x, y - 80, txt, 34); this.tweens.add({ targets: t, y: y - 150, alpha: 0, duration: 500, onComplete: () => t.destroy() });
   }
   makeEnt(h, kind) {
-    const s = SKIN[kind], g = this.add.container(h.x, h.y);
-    if (s.shape === 'ghost') { g.add(this.add.circle(0, -20, 55, s.color)); g.add(this.add.rectangle(0, 20, 110, 70, s.color)); }
-    else { g.add(this.add.ellipse(0, 0, 130, 110, s.color)); g.add(this.add.rectangle(0, -60, 16, 20, 0x2e7d32)); }
-    g.add(this.add.circle(-20, -20, 9, s.eye)); g.add(this.add.circle(20, -20, 9, s.eye));
-    g.setScale(0.2); this.tweens.add({ targets: g, scale: 1, duration: 90 });
-    g.kind = kind; g.hit = false; return g;
+    const a = SKIN.atlas, pre = SKIN.frames[kind], sc = a.displaySize / a.frameSize;
+    const g = this.add.sprite(h.x, h.y - 10, a.key, pre + '_rise').setScale(sc * 0.3);
+    this.tweens.add({ targets: g, scale: sc, duration: 90, onComplete: () => { if (g.active && !g.hit) g.setFrame(pre + '_idle'); } });
+    g.kind = kind; g.pre = pre; g.hit = false; return g;
   }
-  removeEnt(h) { const e = h.ent; if (!e) return; h.ent = null; this.tweens.killTweensOf(e); e.destroy(); }
+  removeEnt(h, wasHit) {
+    const e = h.ent; if (!e) return; h.ent = null; this.tweens.killTweensOf(e);
+    if (!wasHit) { e.destroy(); return; }
+    e.setFrame(e.pre + '_hit');
+    this.tweens.add({ targets: e, alpha: 0, duration: 180, onComplete: () => e.destroy() });
+  }
   spawn(elapsed) {
     const c = this.cfg, active = this.holes.filter(h => h.ent).length;
     const max = elapsed < c.duration / 2 ? c.maxActive[0] : c.maxActive[1];

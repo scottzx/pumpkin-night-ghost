@@ -20,7 +20,7 @@ export class StartScene extends Phaser.Scene {
     this.add.image(360, 640, 'bgStart').setDisplaySize(GAME.width, GAME.height);
     T(this, 360, 200, SKIN.title, 96, SKIN.titleColor);
     T(this, 360, 310, SKIN.subtitle + '\n两关闯关，每关 30 秒', 34);
-    button(this, 360, Math.round(GAME.height * 0.7), '开始游戏', () => this.scene.start('Play', { level: 0, total: 0, bestCombo: 0 }));
+    button(this, 360, Math.round(GAME.height * 0.5), '开始游戏', () => this.scene.start('Play', { level: 0, total: 0, bestCombo: 0 }));
   }
 }
 export class PlayScene extends Phaser.Scene {

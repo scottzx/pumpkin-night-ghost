@@ -7,7 +7,8 @@ import bg2 from './art/bg_level2.jpg?inline';
 export const SKIN = {
   title: '南瓜夜驱鬼', subtitle: '点小鬼！别碰南瓜灯！',
   // 美术批次1：图集帧前缀 + 背景图
-  atlas: { key: 'atlas', png: atlasPng, json: atlasJson, frameSize: 200, displaySize: 150 },
+  atlas: { key: 'atlas', png: atlasPng, json: atlasJson, frameSize: 200, displaySize: 150,
+    tomb: { frame: 'tomb', displaySize: 210, holeX: 100, holeY: 105 } }, // holeX/Y：洞口中心在 200px 帧内的像素坐标
   bgImages: { bg1, bg2 },
   frames: { ghost: 'ghost', gold: 'gold', lantern: 'pumpkin' },
   bg1: 0x3a2350, bg2: 0x120a22, tomb: 0x6b6b7b, hole: 0x0b0614,

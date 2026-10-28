@@ -32,14 +32,15 @@ export class PlayScene extends Phaser.Scene {
   }
   create() {
     const c = this.cfg; this.cameras.main.setBackgroundColor(SKIN[c.bg]);
-    if (this.textures.exists(c.bg)) this.add.image(360, 640, c.bg).setDisplaySize(GAME.width, GAME.height);
+    if (this.textures.exists(c.bg)) this.add.image(360, 640, c.bg).setDisplaySize(GAME.width, GAME.height).setDepth(-2);
     this.hud = T(this, 360, 70, '', 36); this.hud.setDepth(10);
     const ox = 140, oy = 380, gap = 220;
     for (let i = 0; i < 9; i++) {
       const x = ox + (i % 3) * gap, y = oy + Math.floor(i / 3) * 250;
-      this.add.rectangle(x, y + 70, 150, 90, SKIN.tomb).setStrokeStyle(3, 0x333344);
-      this.add.ellipse(x, y + 20, 150, 40, SKIN.hole);
-      this.holes.push({ x, y, ent: null });
+      const tb = SKIN.atlas.tomb, ts = tb.displaySize / SKIN.atlas.frameSize;
+      this.add.image(x, y, SKIN.atlas.key, tb.frame).setScale(ts);
+      const hx = x + (tb.holeX - SKIN.atlas.frameSize / 2) * ts, hy = y + (tb.holeY - SKIN.atlas.frameSize / 2) * ts;
+      this.holes.push({ x: hx, y: hy, ent: null }); // 洞口中心：精灵和命中圆共用
     }
     // 统一由场景处理点击：每个 pointerdown 只命中一个对象，被命中对象立即失效 → 多指不重复计分
     this.input.on('pointerdown', (p) => this.onTap(p));
@@ -64,22 +65,23 @@ export class PlayScene extends Phaser.Scene {
     if (!this.running || this.ended) return;
     let best = null, bd = 1e9;
     for (const h of this.holes) { const e = h.ent; if (!e || e.hit) continue;
-      const d = Phaser.Math.Distance.Between(p.x, p.y, e.x, e.y - 10); if (d < 95 && d < bd) { bd = d; best = h; } } // 命中半径 95 设计像素 ≫ 44px
+      const d = Phaser.Math.Distance.Between(p.x, p.y, e.x, e.y); if (d < 95 && d < bd) { bd = d; best = h; } } // 命中半径 95 设计像素 ≫ 44px
     if (!best) { this.combo = 0; this.updateHud(); return; }
     const e = best.ent; e.hit = true;
-    if (e.kind === 'lantern') { this.score = Math.max(0, this.score - SCORE.lanternPenalty); this.timePenalty += SCORE.lanternTimePenalty; this.timeLeft = Math.max(0, this.timeLeft - SCORE.lanternTimePenalty); this.combo = 0; this.fx(e.x, e.y, 0xff3333, '-' + SCORE.lanternPenalty); }
+    if (e.kind === 'lantern') { this.score = Math.max(0, this.score - SCORE.lanternPenalty); this.timePenalty += SCORE.lanternTimePenalty; this.timeLeft = Math.max(0, this.timeLeft - SCORE.lanternTimePenalty); this.combo = 0; this.fx(e.x, e.y, 'fx_miss', '-' + SCORE.lanternPenalty); }
     else { this.combo++; this.bestCombo = Math.max(this.bestCombo, this.combo);
       let add = e.kind === 'gold' ? SCORE.gold : SCORE.ghost; if (this.combo > SCORE.comboThreshold) add += SCORE.comboBonus;
-      this.score += add; this.fx(e.x, e.y, e.kind === 'gold' ? 0xffd23f : 0xffffff, '+' + add + (this.combo > SCORE.comboThreshold ? ` 连击${this.combo}` : '')); }
+      this.score += add; this.fx(e.x, e.y, this.combo > SCORE.comboThreshold ? 'fx_combo' : 'fx_hit', '+' + add + (this.combo > SCORE.comboThreshold ? ` 连击${this.combo}` : '')); }
     this.removeEnt(best, true); this.updateHud();
   }
-  fx(x, y, color, txt) {
-    const c = this.add.circle(x, y, 40, color, 0.8); this.tweens.add({ targets: c, scale: 2.2, alpha: 0, duration: 250, onComplete: () => c.destroy() });
-    const t = T(this, x, y - 80, txt, 34); this.tweens.add({ targets: t, y: y - 150, alpha: 0, duration: 500, onComplete: () => t.destroy() });
+  fx(x, y, frame, txt) { // 特效：图集静帧 + 缩放淡出（无帧动画）
+    const c = this.add.image(x, y, SKIN.atlas.key, frame).setScale(0.5).setDepth(5);
+    this.tweens.add({ targets: c, scale: 1.1, alpha: 0, duration: 350, onComplete: () => c.destroy() });
+    const t = T(this, x, y - 80, txt, 34).setDepth(6); this.tweens.add({ targets: t, y: y - 150, alpha: 0, duration: 500, onComplete: () => t.destroy() });
   }
   makeEnt(h, kind) {
     const a = SKIN.atlas, pre = SKIN.frames[kind], sc = a.displaySize / a.frameSize;
-    const g = this.add.sprite(h.x, h.y - 10, a.key, pre + '_rise').setScale(sc * 0.3);
+    const g = this.add.sprite(h.x, h.y, a.key, pre + '_rise').setScale(sc * 0.3);
     this.tweens.add({ targets: g, scale: sc, duration: 90, onComplete: () => { if (g.active && !g.hit) g.setFrame(pre + '_idle'); } });
     g.kind = kind; g.pre = pre; g.hit = false; return g;
   }
@@ -115,6 +117,9 @@ export class PlayScene extends Phaser.Scene {
       this.waveOn = true; const w = T(this, 360, 230, SKIN.waveText, 64, '#ff4444').setDepth(25);
       this.tweens.add({ targets: w, alpha: 0, duration: 1500, onComplete: () => w.destroy() });
       this.cameras.main.shake(400, 0.01);
+      this.swarm = this.add.image(360, 640, SKIN.atlas.key, 'fx_swarm').setScale(1).setAlpha(0).setDepth(-1);
+      this.tweens.add({ targets: this.swarm, scale: 3.6, alpha: 0.55, duration: 600 });
+      this.tweens.add({ targets: this.swarm, angle: 360, duration: 4000, repeat: -1 });
       this.tweens.add({ targets: this.flash, fillAlpha: 0.25, duration: 300, yoyo: true, repeat: 3 });
     }
     const interval = c.interval / (this.waveOn ? c.wave.speedMul : 1);

@@ -27,7 +27,7 @@ export class PlayScene extends Phaser.Scene {
   init(d) { // 每次进入都完整重置状态（验收 #6/#10）
     this.levelIdx = d.level; this.cfg = LEVELS[d.level]; this.carry = d;
     this.score = 0; this.combo = 0; this.bestCombo = 0; this.timeLeft = this.cfg.duration;
-    this.running = false; this.paused = false; this.spawnAcc = 0; this.goldLeft = this.cfg.goldCount;
+    this.running = false; this.paused = false; this.startAt = 0; this.pausedMs = 0; this.pauseAt = 0; this.timePenalty = 0; this.spawnAcc = 0; this.goldLeft = this.cfg.goldCount;
     this.holes = []; this.waveOn = false; this.ended = false;
   }
   create() {
@@ -51,22 +51,23 @@ export class PlayScene extends Phaser.Scene {
   }
   startCountdown() {
     const pre = this.levelIdx === 1 ? SKIN.hellText + '\n' : '';
-    let n = GAME.countdown; const t = T(this, 360, 640, pre + n, 90, SKIN.accent).setDepth(30);
-    this.time.addEvent({ delay: 1000, repeat: n - 1, callback: () => { n--; if (n > 0) t.setText(pre + n); else { t.destroy(); this.running = true; } } });
+    // 倒计时也用墙钟 + 暂停补偿（Phaser Clock 暂停后恢复不可靠）
+    this.cdText = T(this, 360, 640, '', 90, SKIN.accent).setDepth(30); this.cdPre = pre;
+    this.cdStart = performance.now(); this.pausedMs = 0;
     this.updateHud();
   }
-  pauseGame() { if (!this.running || this.ended) return; this.paused = true; this.time.paused = true; this.tweens.pauseAll();
+  pauseGame() { if (this.paused || this.ended) return; this.paused = true; this.pauseAt = performance.now(); this.time.paused = true; this.tweens.pauseAll();
     this.pauseTxt = T(this, 360, 640, '已暂停\n点击继续', 60).setDepth(40); }
   resumeGame() { /* 回到前台后等待玩家点击继续，计时不偷跑 */ }
   onTap(p) {
-    if (this.paused) { this.paused = false; this.time.paused = false; this.tweens.resumeAll(); this.pauseTxt?.destroy(); return; }
+    if (this.paused) { this.paused = false; this.pausedMs += performance.now() - this.pauseAt; this.time.paused = false; this.tweens.resumeAll(); this.pauseTxt?.destroy(); return; }
     if (!this.running || this.ended) return;
     let best = null, bd = 1e9;
     for (const h of this.holes) { const e = h.ent; if (!e || e.hit) continue;
       const d = Phaser.Math.Distance.Between(p.x, p.y, e.x, e.y - 10); if (d < 95 && d < bd) { bd = d; best = h; } } // 命中半径 95 设计像素 ≫ 44px
     if (!best) { this.combo = 0; this.updateHud(); return; }
     const e = best.ent; e.hit = true;
-    if (e.kind === 'lantern') { this.score -= SCORE.lanternPenalty; this.timeLeft = Math.max(0, this.timeLeft - SCORE.lanternTimePenalty); this.combo = 0; this.fx(e.x, e.y, 0xff3333, '-' + SCORE.lanternPenalty); }
+    if (e.kind === 'lantern') { this.score = Math.max(0, this.score - SCORE.lanternPenalty); this.timePenalty += SCORE.lanternTimePenalty; this.timeLeft = Math.max(0, this.timeLeft - SCORE.lanternTimePenalty); this.combo = 0; this.fx(e.x, e.y, 0xff3333, '-' + SCORE.lanternPenalty); }
     else { this.combo++; this.bestCombo = Math.max(this.bestCombo, this.combo);
       let add = e.kind === 'gold' ? SCORE.gold : SCORE.ghost; if (this.combo > SCORE.comboThreshold) add += SCORE.comboBonus;
       this.score += add; this.fx(e.x, e.y, e.kind === 'gold' ? 0xffd23f : 0xffffff, '+' + add + (this.combo > SCORE.comboThreshold ? ` 连击${this.combo}` : '')); }
@@ -101,9 +102,15 @@ export class PlayScene extends Phaser.Scene {
     h.ent = this.makeEnt(h, kind); h.ent.life = stay;
   }
   update(_, dtMs) {
-    if (!this.running || this.paused || this.ended) return;
+    if (this.paused || this.ended) return;
+    if (!this.running) {
+      const left = GAME.countdown - (performance.now() - this.cdStart - this.pausedMs) / 1000;
+      if (left > 0) { this.cdText.setText(this.cdPre + Math.ceil(left)); return; }
+      this.cdText.destroy(); this.running = true; this.startAt = performance.now(); this.pausedMs = 0; return;
+    }
     const dt = Math.min(dtMs, 100) / 1000, c = this.cfg;
-    this.timeLeft -= dt; const elapsed = c.duration - this.timeLeft;
+    // 墙钟计时：真实时间 - 暂停时长 + 南瓜灯扣时，低帧率也严格 30s
+    this.timeLeft = c.duration - (performance.now() - this.startAt - this.pausedMs) / 1000 - this.timePenalty; const elapsed = c.duration - this.timeLeft;
     if (c.wave && !this.waveOn && this.timeLeft <= c.wave.lastSeconds) {
       this.waveOn = true; const w = T(this, 360, 230, SKIN.waveText, 64, '#ff4444').setDepth(25);
       this.tweens.add({ targets: w, alpha: 0, duration: 1500, onComplete: () => w.destroy() });
@@ -121,7 +128,7 @@ export class PlayScene extends Phaser.Scene {
   finish() {
     this.ended = true; this.running = false; for (const h of this.holes) this.removeEnt(h);
     const passed = this.score >= this.cfg.passScore;
-    this.scene.start('Result', { level: this.levelIdx, passed, score: this.score, bestCombo: Math.max(this.bestCombo, this.carry.bestCombo || 0) });
+    this.scene.start('Result', { l1Score: this.levelIdx === 0 ? this.score : this.carry.l1Score, level: this.levelIdx, passed, score: this.score, bestCombo: Math.max(this.bestCombo, this.carry.bestCombo || 0) });
   }
 }
 export function titleFor(score, cleared) { for (const t of TITLES) { if (t.cleared && cleared) return t.text; if (!t.cleared && score >= t.min) return t.text; } return ''; }
@@ -131,7 +138,7 @@ export class ResultScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor(d.level === 0 ? SKIN.bg1 : SKIN.bg2);
     if (d.level === 0 && d.passed) {
       T(this, 360, 450, `第一关通过！\n得分 ${d.score}`, 60, SKIN.accent);
-      button(this, 360, 800, '进入第二关', () => this.scene.start('Play', { level: 1, bestCombo: d.bestCombo }));
+      button(this, 360, 800, '进入第二关', () => this.scene.start('Play', { level: 1, bestCombo: d.bestCombo, l1Score: d.l1Score }));
       return;
     }
     if (d.level === 0) { T(this, 360, 450, `差一点！\n得分 ${d.score} / ${LEVELS[0].passScore}`, 56);
@@ -143,7 +150,8 @@ export class ResultScene extends Phaser.Scene {
     T(this, 360, 420, cleared ? '通关第二关！' : '第二关未通过', 48, cleared ? '#7CFC00' : '#ff6666');
     T(this, 360, 540, `第二关得分 ${d.score}\n最高连击 ${d.bestCombo}`, 44);
     T(this, 360, 690, `称号：${titleFor(d.score, cleared)}`, 48, '#ffd23f');
-    T(this, 360, 840, SKIN.shareLine, 30);
-    button(this, 360, 1080, '再来一次', () => this.scene.start('Play', { level: 1, bestCombo: 0 })); // 直接重打第二关
+    T(this, 360, 790, `第一关得分 ${d.l1Score ?? 0}`, 28, '#cccccc');
+    T(this, 360, 860, SKIN.shareLine, 30);
+    button(this, 360, 1080, '再来一次', () => this.scene.start('Play', { level: 1, bestCombo: 0, l1Score: d.l1Score })); // 直接重打第二关
   }
 }

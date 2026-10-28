@@ -20,7 +20,7 @@ export class StartScene extends Phaser.Scene {
     this.add.image(360, 640, 'bgStart').setDisplaySize(GAME.width, GAME.height);
     T(this, 360, 200, SKIN.title, 96, SKIN.titleColor);
     T(this, 360, 310, SKIN.subtitle + '\n两关闯关，每关 30 秒', 34);
-    button(this, 360, 1100, '开始游戏', () => this.scene.start('Play', { level: 0, total: 0, bestCombo: 0 }));
+    button(this, 360, Math.round(GAME.height * 0.7), '开始游戏', () => this.scene.start('Play', { level: 0, total: 0, bestCombo: 0 }));
   }
 }
 export class PlayScene extends Phaser.Scene {
@@ -137,7 +137,8 @@ export class PlayScene extends Phaser.Scene {
     this.scene.start('Result', { l1Score: this.levelIdx === 0 ? this.score : this.carry.l1Score, level: this.levelIdx, passed, score: this.score, bestCombo: Math.max(this.bestCombo, this.carry.bestCombo || 0) });
   }
 }
-export function titleFor(score, cleared) { for (const t of TITLES) { if (t.cleared && cleared) return t.text; if (!t.cleared && score >= t.min) return t.text; } return ''; }
+export function titleInfo(score, cleared) { for (const t of TITLES) { if ((t.cleared && cleared) || (!t.cleared && score >= t.min)) return t; } return { text: '' }; }
+export const titleFor = (score, cleared) => titleInfo(score, cleared).text;
 export class ResultScene extends Phaser.Scene {
   constructor() { super('Result'); }
   create(d) {
@@ -156,16 +157,15 @@ export class ResultScene extends Phaser.Scene {
       return;
     }
     // 战绩卡（竖屏，关键信息集中在画面中部，适合截图）
-    const cleared = d.passed, c = SKIN.cardCrop, tex = this.textures.get('uiCard');
-    if (!tex.has('card')) tex.add('card', 0, c.x, c.y, c.w, c.h);
-    T(this, 360, 330, '战绩卡', 64, SKIN.titleColor);
-    this.add.image(360, 610, 'uiCard', 'card').setScale(1.1); // 约 660x427，y 397-823
+    const cleared = d.passed, ti = titleInfo(d.score, cleared);
+    T(this, 360, 290, '战绩卡', 64, SKIN.titleColor);
+    this.add.image(360, 615, 'uiCard').setScale(1.05); // 600x494 整图 → 630x519，y 356-874
     T(this, 360, 470, cleared ? '通关第二关！' : '第二关未通过', 40, cleared ? '#9dff6a' : '#ff8a8a');
     T(this, 360, 530, '第二关得分', 30);
     T(this, 360, 600, `${d.score}`, 92);
-    T(this, 360, 690, `称号：${titleFor(d.score, cleared)}`, 46, '#ffd23f');
+    T(this, 360, 690, `称号：${ti.text}`, 46, ti.color || SKIN.text);
     T(this, 360, 760, `第一关得分 ${d.l1Score ?? 0}   最高连击 ${d.bestCombo}`, 26);
-    T(this, 360, 890, SKIN.shareLine, 30);
+    T(this, 360, 920, SKIN.shareLine, 30);
     button(this, 360, 1060, '再来一次', () => this.scene.start('Play', { level: 1, bestCombo: 0, l1Score: d.l1Score })); // 直接重打第二关
   }
 }

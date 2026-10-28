@@ -4,10 +4,11 @@ export const SCORE = { ghost: 10, gold: 50, lanternPenalty: 20, lanternTimePenal
 export const LEVELS = [
   { id: 1, name: '第一关 黄昏墓地', duration: 30, passScore: 200, maxActive: [1, 2], stay: 1.2, stayFinal: 1.2,
     interval: 0.8, lanternRatio: 0.10, goldCount: 2, goldStay: 0.6, wave: null, bg: 'bg1' },
-  { id: 2, name: '第二关 地狱模式', duration: 30, passScore: 900, maxActive: [3, 4], stay: 0.7, stayFinal: 0.45,
-    interval: 0.35, lanternRatio: 0.30, goldCount: 3, goldStay: 0.4, wave: { lastSeconds: 10, speedMul: 2 }, bg: 'bg2' },
+  { id: 2, name: '第二关 地狱模式', duration: 30, passScore: 700, maxActive: [3, 4], stay: 0.8, stayFinal: 0.55,
+    interval: 0.35, lanternRatio: 0.25, goldCount: 3, goldStay: 0.4, wave: { lastSeconds: 10, speedMul: 2 }, bg: 'bg2' },
 ];
-export const TITLES = [ // 按得分从高到低匹配；cleared 优先
+export const TITLES = [ // 按顺序匹配：先分数顶档，再 cleared，再分数档；color 可选
+  { min: 1000, text: '鬼王克星', color: '#ffd23f' },
   { cleared: true, text: '通关第二关的狠人' },
   { min: 600, text: '驱鬼大师' },
   { min: 300, text: '见习驱鬼人' },

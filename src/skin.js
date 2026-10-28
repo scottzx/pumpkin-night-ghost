@@ -14,8 +14,6 @@ export const SKIN = {
   atlas: { key: 'atlas', png: atlasPng, json: atlasJson, frameSize: 200, displaySize: 150,
     tomb: { frame: 'tomb', displaySize: 210, holeX: 100, holeY: 105 } }, // holeX/Y：洞口中心在 200px 帧内的像素坐标
   bgImages: { bg1, bg2, bgStart, uiButton, uiPanel, uiCard },
-  // ui_card.png 顶部混入了别的素材（0-40 行）+ 透明空白，只取 y=95 起的卡框
-  cardCrop: { x: 0, y: 95, w: 600, h: 388 },
   frames: { ghost: 'ghost', gold: 'gold', lantern: 'pumpkin' },
   bg1: 0x3a2350, bg2: 0x120a22, tomb: 0x6b6b7b, hole: 0x0b0614,
   ghost: { color: 0xffffff, eye: 0x222222, shape: 'ghost' },

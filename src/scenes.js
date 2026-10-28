@@ -2,10 +2,10 @@ import Phaser from 'phaser';
 import { GAME, LEVELS, SCORE, TITLES } from './config.js';
 import { SKIN } from './skin.js';
 const T = (s, x, y, str, size, color = SKIN.text) =>
-  s.add.text(x, y, str, { fontFamily: SKIN.font, fontSize: size + 'px', color, align: 'center', stroke: '#000', strokeThickness: 4 }).setOrigin(0.5);
+  s.add.text(x, y, str, { fontFamily: SKIN.font, fontStyle: 'bold', fontSize: size + 'px', color, align: 'center', stroke: SKIN.stroke, strokeThickness: Math.max(4, Math.round(size / 7)) }).setOrigin(0.5);
 function button(s, x, y, label, cb) {
-  const b = s.add.rectangle(x, y, 360, 110, 0xff7a1a).setStrokeStyle(4, 0xffffff).setInteractive();
-  T(s, x, y, label, 44);
+  const b = s.add.image(x, y, 'uiButton').setInteractive();
+  T(s, x, y - 4, label, 46);
   b.on('pointerdown', () => { b.disableInteractive(); cb(); });
   return b;
 }
@@ -17,9 +17,10 @@ export class StartScene extends Phaser.Scene {
   }
   create() {
     this.cameras.main.setBackgroundColor(SKIN.bg1);
-    T(this, 360, 380, SKIN.title, 84, SKIN.accent);
-    T(this, 360, 500, SKIN.subtitle + '\n两关闯关，每关 30 秒', 34);
-    button(this, 360, 800, '开始游戏', () => this.scene.start('Play', { level: 0, total: 0, bestCombo: 0 }));
+    this.add.image(360, 640, 'bgStart').setDisplaySize(GAME.width, GAME.height);
+    T(this, 360, 200, SKIN.title, 96, SKIN.titleColor);
+    T(this, 360, 310, SKIN.subtitle + '\n两关闯关，每关 30 秒', 34);
+    button(this, 360, 1100, '开始游戏', () => this.scene.start('Play', { level: 0, total: 0, bestCombo: 0 }));
   }
 }
 export class PlayScene extends Phaser.Scene {
@@ -141,22 +142,30 @@ export class ResultScene extends Phaser.Scene {
   constructor() { super('Result'); }
   create(d) {
     this.cameras.main.setBackgroundColor(d.level === 0 ? SKIN.bg1 : SKIN.bg2);
-    if (d.level === 0 && d.passed) {
-      T(this, 360, 450, `第一关通过！\n得分 ${d.score}`, 60, SKIN.accent);
-      button(this, 360, 800, '进入第二关', () => this.scene.start('Play', { level: 1, bestCombo: d.bestCombo, l1Score: d.l1Score }));
+    this.add.image(360, 640, d.level === 0 ? 'bg1' : 'bg2').setDisplaySize(GAME.width, GAME.height);
+    this.add.rectangle(360, 640, 720, 1280, 0x000000, 0.35);
+    if (d.level === 0) {
+      this.add.image(360, 520, 'uiPanel').setScale(1.1);
+      if (d.passed) {
+        T(this, 360, 490, '第一关通过！', 56, SKIN.titleColor); T(this, 360, 565, `得分 ${d.score}`, 44);
+        button(this, 360, 820, '进入第二关', () => this.scene.start('Play', { level: 1, bestCombo: d.bestCombo, l1Score: d.l1Score }));
+      } else {
+        T(this, 360, 490, '差一点！', 56, SKIN.titleColor); T(this, 360, 565, `得分 ${d.score} / ${LEVELS[0].passScore}`, 44);
+        button(this, 360, 820, '再来一次', () => this.scene.start('Play', { level: 0, bestCombo: 0 }));
+      }
       return;
     }
-    if (d.level === 0) { T(this, 360, 450, `差一点！\n得分 ${d.score} / ${LEVELS[0].passScore}`, 56);
-      button(this, 360, 800, '再来一次', () => this.scene.start('Play', { level: 0, bestCombo: 0 })); return; }
-    // 战绩卡（竖屏，信息居中，适合截图）
-    const cleared = d.passed;
-    this.add.rectangle(360, 600, 600, 760, 0x2a1840).setStrokeStyle(6, 0xff9a3c);
-    T(this, 360, 290, '战绩卡', 56, SKIN.accent);
-    T(this, 360, 420, cleared ? '通关第二关！' : '第二关未通过', 48, cleared ? '#7CFC00' : '#ff6666');
-    T(this, 360, 540, `第二关得分 ${d.score}\n最高连击 ${d.bestCombo}`, 44);
-    T(this, 360, 690, `称号：${titleFor(d.score, cleared)}`, 48, '#ffd23f');
-    T(this, 360, 790, `第一关得分 ${d.l1Score ?? 0}`, 28, '#cccccc');
-    T(this, 360, 860, SKIN.shareLine, 30);
-    button(this, 360, 1080, '再来一次', () => this.scene.start('Play', { level: 1, bestCombo: 0, l1Score: d.l1Score })); // 直接重打第二关
+    // 战绩卡（竖屏，关键信息集中在画面中部，适合截图）
+    const cleared = d.passed, c = SKIN.cardCrop, tex = this.textures.get('uiCard');
+    if (!tex.has('card')) tex.add('card', 0, c.x, c.y, c.w, c.h);
+    T(this, 360, 330, '战绩卡', 64, SKIN.titleColor);
+    this.add.image(360, 610, 'uiCard', 'card').setScale(1.1); // 约 660x427，y 397-823
+    T(this, 360, 470, cleared ? '通关第二关！' : '第二关未通过', 40, cleared ? '#9dff6a' : '#ff8a8a');
+    T(this, 360, 530, '第二关得分', 30);
+    T(this, 360, 600, `${d.score}`, 92);
+    T(this, 360, 690, `称号：${titleFor(d.score, cleared)}`, 46, '#ffd23f');
+    T(this, 360, 760, `第一关得分 ${d.l1Score ?? 0}   最高连击 ${d.bestCombo}`, 26);
+    T(this, 360, 890, SKIN.shareLine, 30);
+    button(this, 360, 1060, '再来一次', () => this.scene.start('Play', { level: 1, bestCombo: 0, l1Score: d.l1Score })); // 直接重打第二关
   }
 }

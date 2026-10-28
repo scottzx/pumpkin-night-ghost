@@ -118,7 +118,7 @@ export class PlayScene extends Phaser.Scene {
       this.tweens.add({ targets: w, alpha: 0, duration: 1500, onComplete: () => w.destroy() });
       this.cameras.main.shake(400, 0.01);
       this.swarm = this.add.image(360, 640, SKIN.atlas.key, 'fx_swarm').setScale(1).setAlpha(0).setDepth(-1);
-      this.tweens.add({ targets: this.swarm, scale: 3.6, alpha: 0.55, duration: 600 });
+      this.tweens.add({ targets: this.swarm, scale: 3.6, alpha: 0.3, duration: 600 });
       this.tweens.add({ targets: this.swarm, angle: 360, duration: 4000, repeat: -1 });
       this.tweens.add({ targets: this.flash, fillAlpha: 0.25, duration: 300, yoyo: true, repeat: 3 });
     }

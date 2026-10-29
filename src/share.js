@@ -19,7 +19,7 @@ async function versionOk(m) {
   } catch (e) { return false; }
 }
 // 文案三档（改文案只改这里）：{s} = 本局第二关得分
-export const SHARE_TEXT = { fail: '第二关我真的过不去😭 只拿了 {s} 分，你能过吗？来 PK', pass: '第二关我过了！{s} 分，99% 的人过不去，你来试试？', king: '鬼王克星就是我，{s} 分，谁来挑战', topics: ' #南瓜夜驱鬼 #万圣节' };
+export const SHARE_TEXT = { fail: '第二关我真的过不去😭 只拿了 {s} 分，你能过吗？来 PK', pass: '第二关我过了！{s} 分，大部分人都过不去，你来试试？', king: '鬼王克星就是我，{s} 分，谁来挑战', topics: ' #南瓜夜驱鬼 #万圣节' };
 export function shareText(score, passed) {
   const t = score >= 1000 ? SHARE_TEXT.king : passed ? SHARE_TEXT.pass : SHARE_TEXT.fail;
   return t.replace('{s}', score) + SHARE_TEXT.topics;

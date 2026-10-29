@@ -1,6 +1,6 @@
 // 晒战绩：postNote（小工具 JS API §3.3）+ writeTempFile（§3.5）。浏览器/旧客户端/无 API 时不渲染。
 // postNote 未标注独立最低版本；本实现传 pageType（§3.3 标注 9.43+），故以 9430 为门槛（§3.6 判断法）。
-const MIN_VER = 9430, GUARD = 1500, TOPICS = ' #南瓜夜驱鬼 #万圣节';
+const MIN_VER = 9430, GUARD = 1500;
 
 function api() {
   try {
@@ -18,8 +18,11 @@ async function versionOk(m) {
     return Math.floor(v / 1000) >= MIN_VER;
   } catch (e) { return false; }
 }
-export function shareText(score) {
-  return (score >= 1000 ? `鬼王克星就是我，${score} 分，谁来挑战` : `第二关我真的过不去😭 只拿了 ${score} 分，你能过吗？来 PK`) + TOPICS;
+// 文案三档（改文案只改这里）：{s} = 本局第二关得分
+export const SHARE_TEXT = { fail: '第二关我真的过不去😭 只拿了 {s} 分，你能过吗？来 PK', pass: '第二关我过了！{s} 分，99% 的人过不去，你来试试？', king: '鬼王克星就是我，{s} 分，谁来挑战', topics: ' #南瓜夜驱鬼 #万圣节' };
+export function shareText(score, passed) {
+  const t = score >= 1000 ? SHARE_TEXT.king : passed ? SHARE_TEXT.pass : SHARE_TEXT.fail;
+  return t.replace('{s}', score) + SHARE_TEXT.topics;
 }
 // 截取战绩卡（标题到卡片底部），上方加钩子文案横幅，输出 PNG data URI
 export function bannerFor(score, passed) { return score >= 1000 ? '鬼王克星就是我' : passed ? '' : '第二关我真的过不去'; }
@@ -63,7 +66,7 @@ export function addShareButton(scene, x, y, font, score, passed) {
         if (r && r.filePath) url = r.filePath;
       }
       if (!alive || !url) return; // mediaInfo 必填（§3.3），没有图则静默放弃
-      await m.postNote({ title: '南瓜夜驱鬼 · 第二关战绩', content: shareText(score), pageType: 'photo_publish', mediaInfo: { image_resources: [{ url }] } });
+      await m.postNote({ title: '南瓜夜驱鬼 · 第二关战绩', content: shareText(score, passed), pageType: 'photo_publish', mediaInfo: { image_resources: [{ url }] } });
     } catch (e) { /* 取消/失败：静默 */ }
     finally { pending = false; if (alive) setLock(false); }
   }

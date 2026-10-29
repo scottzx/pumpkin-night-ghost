@@ -1,7 +1,7 @@
 // 晒战绩：postNote（小工具 JS API §3.3）+ writeTempFile（§3.5）。浏览器/旧客户端/无 API 时不渲染。
 // postNote 未标注独立最低版本；本实现传 pageType（§3.3 标注 9.43+），故以 9430 为门槛（§3.6 判断法）。
 const MIN_VER = 9430, GUARD = 1500, TOPICS = ' #南瓜夜驱鬼 #万圣节';
-const HOOK = '第二关我真的过不去😭';
+const HOOK = '第二关我真的过不去';
 function api() {
   try {
     const m = window.xhs && window.xhs.miniTool;

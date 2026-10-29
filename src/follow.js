@@ -30,19 +30,18 @@ export function addFollowButton(scene, x, y, font) {
   let alive = true, pending = false, used = false, c = null, bg = null, txt = null, zone = null;
   scene.events.once('shutdown', () => { alive = false; if (zone) zone.removeAllListeners(); });
   const W = 320, H = 72;
-  const draw = (followed) => {
-    const col = followed ? 0x9a9aa6 : 0xff9a3c;
+  const draw = () => {
+    const col = 0xff9a3c;
     bg.clear(); bg.fillStyle(0x2a1240, 0.7); bg.fillRoundedRect(-W / 2, -H / 2, W, H, 20);
     bg.lineStyle(2, col, 1); bg.strokeRoundedRect(-W / 2, -H / 2, W, H, 20);
-    txt.setText(followed ? '已关注 ✓' : '关注我，下个游戏更难').setColor(followed ? '#9a9aa6' : '#ff9a3c');
-    bg.setAlpha(followed ? 0.5 : 1); txt.setAlpha(followed ? 0.65 : 1); // 已关注：描边/底 50%，文字 65% 更易读
-    if (followed || used) zone.disableInteractive(); else zone.setInteractive({ useHandCursor: true });
+    txt.setText('关注我，下个游戏更难').setColor('#ff9a3c');
+    if (used) zone.disableInteractive(); else zone.setInteractive({ useHandCursor: true });
   };
   const apply = (s) => {
     if (!alive) return;
     if (s === -1) { if (!c) return; else return; } // 失败：未建则隐藏，已建保持现状
-    if (s === 2) { if (c) c.destroy(); c = null; return; }
-    if (s !== 0 && s !== 1) return;
+    if (s === 1 || s === 2) { if (c) c.destroy(); c = null; return; } // 已关注/作者本人：整个按钮隐藏
+    if (s !== 0) return;
     if (!c) {
       c = scene.add.container(x, y).setName('followBtn');
       bg = scene.add.graphics(); txt = scene.add.text(0, 0, '', { fontFamily: font, fontStyle: 'bold', fontSize: '24px' }).setOrigin(0.5);
@@ -50,7 +49,7 @@ export function addFollowButton(scene, x, y, font) {
       c.add([bg, txt, zone]);
       zone.on('pointerup', onTap);
     }
-    draw(s === 1);
+    draw();
   };
   const hide = () => { if (c) c.destroy(); c = null; };
   async function onTap() {
@@ -58,13 +57,13 @@ export function addFollowButton(scene, x, y, font) {
     pending = true; used = true; zone.disableInteractive();
     let hideIt = false;
     try { await m.followAuthor(); }
-    catch (e) { const code = e && (e.code != null ? e.code : e.errCode); if (Number(code) === 15404) hideIt = true; }
+    catch (e) { const code = e && (e.code != null ? e.code : e.errCode); if (Number(code) === 15404) hideIt = true; else if (Number(code) === 20002) used = false; } // 用户取消：允许重试
     pending = false;
     if (!alive) return;
     if (hideIt) { hide(); return; }
     const s = await queryStatus(m);
     if (!alive || !c) return;
-    if (s === -1) draw(false); else apply(s);
+    if (s === -1) draw(); else apply(s);
   }
   return (async () => {
     if (!(await versionOk(m)) || !alive) return;

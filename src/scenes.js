@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GAME, LEVELS, SCORE, TITLES } from './config.js';
 import { SKIN } from './skin.js';
+import { addFollowButton } from './follow.js';
 const T = (s, x, y, str, size, color = SKIN.text) =>
   s.add.text(x, y, str, { fontFamily: SKIN.font, fontStyle: 'bold', fontSize: size + 'px', color, align: 'center', stroke: SKIN.stroke, strokeThickness: Math.max(4, Math.round(size / 7)) }).setOrigin(0.5);
 function button(s, x, y, label, cb) {
@@ -167,5 +168,6 @@ export class ResultScene extends Phaser.Scene {
     T(this, 360, 760, `第一关得分 ${d.l1Score ?? 0}   最高连击 ${d.bestCombo}`, 26);
     T(this, 360, 920, SKIN.shareLine, 30);
     button(this, 360, 1060, '再来一次', () => this.scene.start('Play', { level: 1, bestCombo: 0, l1Score: d.l1Score })); // 直接重打第二关
+    this.followReady = addFollowButton(this, 360, 1182, SKIN.font); // 再来一次底边1121.5 + 24px；底边1218，距底62px
   }
 }

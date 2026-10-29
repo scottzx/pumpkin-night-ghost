@@ -35,7 +35,7 @@ export function addFollowButton(scene, x, y, font) {
     bg.clear(); bg.fillStyle(0x2a1240, 0.7); bg.fillRoundedRect(-W / 2, -H / 2, W, H, 20);
     bg.lineStyle(2, col, 1); bg.strokeRoundedRect(-W / 2, -H / 2, W, H, 20);
     txt.setText(followed ? '已关注 ✓' : '关注我，下个游戏更难').setColor(followed ? '#9a9aa6' : '#ff9a3c');
-    c.setAlpha(followed ? 0.5 : 1);
+    bg.setAlpha(followed ? 0.5 : 1); txt.setAlpha(followed ? 0.65 : 1); // 已关注：描边/底 50%，文字 65% 更易读
     if (followed || used) zone.disableInteractive(); else zone.setInteractive({ useHandCursor: true });
   };
   const apply = (s) => {

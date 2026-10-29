@@ -169,7 +169,16 @@ export class ResultScene extends Phaser.Scene {
     T(this, 360, 760, `第一关得分 ${d.l1Score ?? 0}   最高连击 ${d.bestCombo}`, 26);
     T(this, 360, 920, SKIN.shareLine, 30);
     button(this, 360, 1060, '再来一次', () => this.scene.start('Play', { level: 1, bestCombo: 0, l1Score: d.l1Score })); // 直接重打第二关
-    this.shareReady = addShareButton(this, 360, 1158, SKIN.font, d.score); // 320x60，y 1128-1188（再来一次底边1121.5 下方）
-    this.followReady = addFollowButton(this, 360, 1236, SKIN.font); // 320x72，y 1200-1272
+    // 底部一行（y=1182，底边1218）：两个都在 → 晒战绩 x=200 / 关注 x=520 各 300x72、间距 20；只有一个 → 居中 320x72
+    const relayout = () => {
+      const g = (n) => this.children.list.find((o) => o.name === n);
+      const row = [g('shareBtn'), g('followBtn')].filter(Boolean);
+      if (row.length === 2) { row[0].setPosition(200, 1182).setW(300); row[1].setPosition(520, 1182).setW(300); }
+      else if (row.length === 1) row[0].setPosition(360, 1182).setW(320);
+    };
+    this.events.on('btnrow', relayout);
+    this.events.once('shutdown', () => this.events.off('btnrow', relayout));
+    this.shareReady = addShareButton(this, 360, 1182, SKIN.font, d.score, d.passed);
+    this.followReady = addFollowButton(this, 360, 1182, SKIN.font);
   }
 }

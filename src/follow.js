@@ -29,7 +29,7 @@ export function addFollowButton(scene, x, y, font) {
   if (!m) return Promise.resolve();
   let alive = true, pending = false, used = false, c = null, bg = null, txt = null, zone = null;
   scene.events.once('shutdown', () => { alive = false; if (zone) zone.removeAllListeners(); });
-  const W = 320, H = 72;
+  let W = 320; const H = 72;
   const draw = () => {
     const col = 0xff9a3c;
     bg.clear(); bg.fillStyle(0x2a1240, 0.7); bg.fillRoundedRect(-W / 2, -H / 2, W, H, 20);
@@ -40,7 +40,7 @@ export function addFollowButton(scene, x, y, font) {
   const apply = (s) => {
     if (!alive) return;
     if (s === -1) { if (!c) return; else return; } // 失败：未建则隐藏，已建保持现状
-    if (s === 1 || s === 2) { if (c) c.destroy(); c = null; return; } // 已关注/作者本人：整个按钮隐藏
+    if (s === 1 || s === 2) { hide(); return; } // 已关注/作者本人：整个按钮隐藏
     if (s !== 0) return;
     if (!c) {
       c = scene.add.container(x, y).setName('followBtn');
@@ -48,10 +48,12 @@ export function addFollowButton(scene, x, y, font) {
       zone = scene.add.zone(0, 0, W, H);
       c.add([bg, txt, zone]);
       zone.on('pointerup', onTap);
+      c.setW = (w) => { if (W === w) return; W = w; zone.setSize(W, H); draw(); };
+      draw(); scene.events.emit('btnrow');
     }
     draw();
   };
-  const hide = () => { if (c) c.destroy(); c = null; };
+  function hide() { if (c) { c.destroy(); c = null; if (alive) scene.events.emit('btnrow'); } }
   async function onTap() {
     if (pending || used || !alive) return;
     pending = true; used = true; zone.disableInteractive();

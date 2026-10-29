@@ -56,7 +56,7 @@ export function addFollowButton(scene, x, y, font) {
     if (pending || used || !alive) return;
     pending = true; used = true; zone.disableInteractive();
     let hideIt = false;
-    try { await m.followAuthor(); }
+    try { await m.followAuthor(); hideIt = true; } // 关注成功：立即隐藏，不依赖回查
     catch (e) { const code = e && (e.code != null ? e.code : e.errCode); if (Number(code) === 15404) hideIt = true; else if (Number(code) === 20002) used = false; } // 用户取消：允许重试
     pending = false;
     if (!alive) return;
